@@ -121,7 +121,10 @@ int mm_init(void)
 /* $begin mmmalloc */
 void *mm_malloc(size_t size)
 {
-	//TODO
+
+  get_heap_listp()
+
+
 	return NULL;
 }
 /* $end mmmalloc */
@@ -156,7 +159,7 @@ void *mm_realloc(void *ptr, size_t size)
   if (size == 0)
     mm_free(ptr);
 
-  
+
 
 	return NULL;
 }
