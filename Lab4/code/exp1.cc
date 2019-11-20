@@ -6,5 +6,7 @@ int main() {
     if (x == nullptr)
 	cout << "This won’t occur--new throws an error on failure!\n";
     // (Really, that was just to avoid an “unused variable” warning.)
+    
+    delete[] x;
     return 0;
 }
