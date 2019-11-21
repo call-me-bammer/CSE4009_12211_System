@@ -2,8 +2,9 @@
 #include <ctime>
 using namespace std;
 
+//initialize with 0 at first...
 int main() {    
-    int x;
+    int x = 0;
 
     if (time(nullptr) == 42)	// no time machine available
 	x = 42;			// so this will not happen

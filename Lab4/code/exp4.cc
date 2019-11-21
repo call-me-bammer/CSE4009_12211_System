@@ -8,7 +8,7 @@ void foo(int x) {
 }
 
 int main() {
-    int y;
+    int y = 0;
     const auto now = time(nullptr);	// How many seconds since 1970 started?
     if (now == 0)			// False, unless you have a TARDIS.
 	y = 99;
