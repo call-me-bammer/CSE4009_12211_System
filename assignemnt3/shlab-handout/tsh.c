@@ -103,7 +103,6 @@ int main(int argc, char **argv)
     while ((c = getopt(argc, argv, "hvp")) != EOF) {
         switch (c) {
         case 'h':             /* print help message */
-            printf("c equals 'h'!\n");
             usage();
 	    break;
         case 'v':             /* emit additional diagnostic info */
@@ -189,13 +188,10 @@ void eval(char *cmdline) {
 
         /* Parent waits for foreground job to terminate */
         if (!bg) {
-            int status;
-            if (waitpid(pid, &status, 0) < 0) {
-                unix_error("waitfg: waitpid error");
-            }
+            waitfg(pid);
         } else {
-            // TODO: jid control (make test04)
-            printf("%d %s", pid, cmdline);
+            // TODO: jid control (make test04, test05)
+            printf("[%d] (%d) %s", pid2jid(pid), pid, cmdline);
         }
     }
     return;
@@ -275,11 +271,11 @@ int builtin_cmd(char **argv) {
         exit(0);
     }
     else if (!strcmp(args, "bg") && argv[++argc] != NULL) {
-        printf("(builtin_cmd: bg <jid>: %d)\n", atoi(argv[argc]));
+        printf("(builtin_cmd: bg <job>: %d)\n", atoi(argv[argc]));
         return 1;
     }
     else if (!strcmp(args, "fg") && argv[++argc] != NULL) {
-        printf("(builtin_cmd: fg <jid>: %d)\n", atoi(argv[argc]));
+        printf("(builtin_cmd: fg <job>: %d)\n", atoi(argv[argc]));
         return 1;
     }
     return 0;   /* not a builtin command */
@@ -346,10 +342,11 @@ void do_bgfg(char **argv)
 /* 
  * waitfg - Block until process pid is no longer the foreground process
  */
-void waitfg(pid_t pid)
-{
-	//TODO
-    return;
+void waitfg(pid_t pid) {
+    int status;
+    if (waitpid(pid, &status, 0) < 0) {
+        unix_error("waitfg: waitpid error");
+    }
 }
 
 /*****************
