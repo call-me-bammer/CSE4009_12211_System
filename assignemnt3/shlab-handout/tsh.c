@@ -1,7 +1,7 @@
 /* 
  * tsh - A tiny shell program with job control
  * 
- * <Put your name and ID here>
+ * <Hyeonseo Jo 2018009143>
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,6 +20,7 @@
 #define MAXJID    1<<16   /* max job ID */
 
 /* Job states */
+
 #define UNDEF 0 /* undefined */
 #define FG 1    /* running in foreground */
 #define BG 2    /* running in background */
@@ -102,6 +103,7 @@ int main(int argc, char **argv)
     while ((c = getopt(argc, argv, "hvp")) != EOF) {
         switch (c) {
         case 'h':             /* print help message */
+            printf("c equals 'h'!\n");
             usage();
 	    break;
         case 'v':             /* emit additional diagnostic info */
@@ -163,9 +165,39 @@ int main(int argc, char **argv)
  * background children don't receive SIGINT (SIGTSTP) from the kernel
  * when we type ctrl-c (ctrl-z) at the keyboard.  
 */
-void eval(char *cmdline) 
-{
-	//TODO
+void eval(char *cmdline) {
+
+    char* argv[MAXARGS]; /* Argument list execve() */
+    char buf[MAXLINE];
+    int bg;
+    pid_t pid;
+
+    strcpy(buf, cmdline);
+    bg = parseline(buf, argv);
+
+    if (argv[0] == NULL) {
+        return; /* Ignore empty lines */
+    }
+    if (!builtin_cmd(argv)) {
+        //printf("not a builtin_cmd, so fork/exec!\n");
+        if ((pid = fork()) == 0) { /* Child runs user job */
+            if (execve(argv[0], argv, environ) < 0) {
+                printf("%s: Command not found.\n", argv[0]);
+                exit(0);
+            }
+        }
+
+        /* Parent waits for foreground job to terminate */
+        if (!bg) {
+            int status;
+            if (waitpid(pid, &status, 0) < 0) {
+                unix_error("waitfg: waitpid error");
+            }
+        } else {
+            // TODO: jid control (make test04)
+            printf("%d %s", pid, cmdline);
+        }
+    }
     return;
 }
 
@@ -230,10 +262,27 @@ int parseline(const char *cmdline, char **argv)
  * builtin_cmd - If the user has typed a built-in command then execute
  *    it immediately.  
  */
-int builtin_cmd(char **argv) 
-{
-	//TODO
-    return 0;     /* not a builtin command */
+int builtin_cmd(char **argv) {
+
+    int argc = 0;
+    char* args = argv[argc];
+
+    if (!strcmp(args, "jobs")) {
+        printf("(builtin_cmd: jobs)\n");
+        return 1;
+    }
+    else if (!strcmp(args, "quit")) {
+        exit(0);
+    }
+    else if (!strcmp(args, "bg") && argv[++argc] != NULL) {
+        printf("(builtin_cmd: bg <jid>: %d)\n", atoi(argv[argc]));
+        return 1;
+    }
+    else if (!strcmp(args, "fg") && argv[++argc] != NULL) {
+        printf("(builtin_cmd: fg <jid>: %d)\n", atoi(argv[argc]));
+        return 1;
+    }
+    return 0;   /* not a builtin command */
 }
 
 /* 
