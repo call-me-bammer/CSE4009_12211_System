@@ -8,6 +8,7 @@
 #include <stdlib.h>     /* exit() */
 #include <unistd.h>
 #include <string.h>     /* strcpy, strlen, strchr */
+#include <signal.h>
 #include <sys/types.h>  
 #include <sys/wait.h>   /* waitpid() */ 
 #include <errno.h>
@@ -58,14 +59,20 @@ int builtin_cmd(char **argv);
 
 void waitfg(pid_t pid);
 
+void sigint_handler(int sig);
+
 int parseline(const char* cmdline, char** argv);
 
 void clearjob(struct job_t *job);
 void initjobs(struct job_t *jobs);
+pid_t fgpid(struct job_t* jobs);
+int pid2jid(pid_t pid);
 
 void usage(void);
 void unix_error(char* msg);
 void app_error(char* msg);
+typedef void handler_t(int);
+handler_t *Signal(int signum, handler_t *handler);
 
 /*
  * main - The shell's main routine
@@ -94,7 +101,11 @@ int main(int argc, char** argv) {
 
     /* Install the signal handlers */
 
-    
+    /* These are the ones you will need to implement */
+    Signal(SIGINT,  sigint_handler); /* ctrl-c */
+    Signal(SIGTSTP, sigint_handler); /* ctrl-z */
+    Signal(SIGCHLD, sigint_handler); /* Terminated or stopped child */
+
 
     /* Initialize the job list */
     initjobs(jobs);
@@ -157,7 +168,7 @@ void eval(char* cmdline) {
         if (!bg) {
             waitfg(pid);
         } else {
-            printf("(%d) %s", pid, cmdline);
+            printf("[%d] (%d) %s", pid2jid(pid), pid, cmdline);
         }
     }
     return;
@@ -256,6 +267,37 @@ void waitfg(pid_t pid) {
     }
 }
 
+/*****************
+ * Signal handlers
+ *****************/
+
+ void sigint_handler(int sig) {
+
+     /* $begin handout */
+     pid_t pid;
+
+     if (verbose) {
+         printf("sigint_handler: entering\n");
+     }
+     if ((pid = fgpid(jobs)) > 0) {
+         if (kill(-pid, SIGINT) < 0) {
+             unix_error("kill (sigint) error");
+         }
+         if (verbose) {
+             printf("sigint_handler: Job (%d) killed\n", pid);
+         }
+     }
+     if (verbose) {
+         printf("sigint_handler: exiting\n");
+     }
+     /* $end handout */
+    return;
+ }
+
+/*********************
+ * End signal handlers
+ *********************/
+
 /***********************************************
  * Helper routines that manipulate the job list
  **********************************************/
@@ -273,6 +315,35 @@ void initjobs(struct job_t *jobs) {
     for (i = 0; i < MAXJOBS; i++)
 	clearjob(&jobs[i]);
 }
+
+/* fgpid - Return PID of current foreground job, 0 if no such job */
+pid_t fgpid(struct job_t* jobs) {
+    int i;
+    for (i = 0; i < MAXJOBS; i++) {
+        if (jobs[i].state == FG) {
+            return jobs[i].pid;
+        }
+    }
+    return 0;
+}
+
+/* pid2jid - Map process ID to job ID */
+int pid2jid(pid_t pid) {
+    int i;
+    if (pid < 1) {
+	    return 0;
+    }
+    for (i = 0; i < MAXJOBS; i++) {
+	    if (jobs[i].pid == pid) {
+            return jobs[i].jid;
+        }
+    }
+    return 0;
+}
+
+/******************************
+ * end job list helper routines
+ ******************************/
 
 
 /***********************
@@ -317,4 +388,21 @@ void unix_error(char *msg)
 void app_error(char* msg) {
     fprintf(stdout, "%s\n", msg);
     exit(1);
+}
+
+/*
+ * Signal - wrapper for the sigaction function
+ */
+handler_t *Signal(int signum, handler_t *handler) {
+
+    struct sigaction action, old_action;
+
+    action.sa_handler = handler;
+    sigemptyset(&action.sa_mask); /* block sigs of type being handled */
+    action.sa_flags = SA_RESTART; /* restart syscalls if possible */
+
+    if (sigaction(signum, &action, &old_action) < 0) {
+        unix_error("Signal error");
+    }
+    return (old_action.sa_handler);
 }

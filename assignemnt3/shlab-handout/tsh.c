@@ -678,7 +678,7 @@ void app_error(char *msg)
 /*
  * Signal - wrapper for the sigaction function
  */
-handler_t *Signal(int signum, handler_t *handler) 
+handler_t *Signal(int signum, handler_t *handler)
 {
     struct sigaction action, old_action;
 
