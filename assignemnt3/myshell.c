@@ -148,6 +148,7 @@ void eval(char* cmdline) {
     char buf[MAXLINE];
     int bg;
     pid_t pid;
+    int stat;
 
     strcpy(buf, cmdline);
     bg = parseline(buf, argv);
@@ -160,6 +161,7 @@ void eval(char* cmdline) {
         if ((pid = fork()) == 0) { /* Child runs user job */
             if (execve(argv[0], argv, environ) < 0) {
                 printf("%s: Command not found.\n", argv[0]);
+                // status 0 reported by WEXITSTATUS
                 exit(0);
             }
         }

@@ -18,6 +18,7 @@
 #define MAXARGS     128   /* max args on a command line */
 #define MAXJOBS      16   /* max jobs at any point in time */
 #define MAXJID    1<<16   /* max job ID */
+#define VERSION     0.1   /* version of the tsh */
 
 /* Job states */
 
@@ -169,7 +170,7 @@ void eval(char *cmdline) {
     char* argv[MAXARGS]; /* Argument list execve() */
     char buf[MAXLINE];
     int bg;
-    pid_t pid;
+    volatile sig_atomic_t pid;
 
     strcpy(buf, cmdline);
     bg = parseline(buf, argv);
@@ -177,9 +178,16 @@ void eval(char *cmdline) {
     if (argv[0] == NULL) {
         return; /* Ignore empty lines */
     }
+
     if (!builtin_cmd(argv)) {
-        //printf("not a builtin_cmd, so fork/exec!\n");
+
         if ((pid = fork()) == 0) { /* Child runs user job */
+            
+            /* set child process to identical process gruop (test06) */
+            if (setpgrp() < 0) {      /* equivalent to setpgid(0, 0) */
+                unix_error("eval(): setpgid() error");
+            }
+
             if (execve(argv[0], argv, environ) < 0) {
                 printf("%s: Command not found.\n", argv[0]);
                 exit(0);
@@ -187,6 +195,10 @@ void eval(char *cmdline) {
         }
 
         /* Parent waits for foreground job to terminate */
+
+        /* Parent adds the job */
+        addjob(jobs, pid, (bg != 0 ? BG : FG), cmdline);
+        
         if (!bg) {
             waitfg(pid);
         } else {
@@ -263,19 +275,23 @@ int builtin_cmd(char **argv) {
     int argc = 0;
     char* args = argv[argc];
 
+    /* list jobs */
     if (!strcmp(args, "jobs")) {
-        printf("(builtin_cmd: jobs)\n");
+        //printf("(builtin_cmd: jobs)\n");
+        listjobs(jobs);
         return 1;
     }
     else if (!strcmp(args, "quit")) {
         exit(0);
     }
     else if (!strcmp(args, "bg") && argv[++argc] != NULL) {
-        printf("(builtin_cmd: bg <job>: %d)\n", atoi(argv[argc]));
+        //printf("(builtin_cmd: bg <job>: %d)\n", atoi(argv[argc]));
+        do_bgfg(argv);
         return 1;
     }
     else if (!strcmp(args, "fg") && argv[++argc] != NULL) {
-        printf("(builtin_cmd: fg <job>: %d)\n", atoi(argv[argc]));
+        //printf("(builtin_cmd: fg <job>: %d)\n", atoi(argv[argc]));
+        do_bgfg(argv);
         return 1;
     }
     return 0;   /* not a builtin command */
@@ -343,9 +359,12 @@ void do_bgfg(char **argv)
  * waitfg - Block until process pid is no longer the foreground process
  */
 void waitfg(pid_t pid) {
-    int status;
-    if (waitpid(pid, &status, 0) < 0) {
-        unix_error("waitfg: waitpid error");
+
+    struct job_t* fg_job = getjobpid(jobs, pid);
+
+    /* state check for changing between bg & fg (test09, 10) */
+    while (fg_job->pid == pid && fg_job->state == FG) {
+        sleep(1);
     }
 }
 
@@ -601,12 +620,13 @@ int pid2jid(pid_t pid)
 {
     int i;
 
-    if (pid < 1)
-	return 0;
+    if (pid < 1) {
+	    return 0;
+    }
     for (i = 0; i < MAXJOBS; i++)
 	if (jobs[i].pid == pid) {
-            return jobs[i].jid;
-        }
+        return jobs[i].jid;
+    }
     return 0;
 }
 
@@ -650,10 +670,21 @@ void listjobs(struct job_t *jobs)
  */
 void usage(void) 
 {
+    printf("Welcome to the B Shell.\n");
+    printf("version: %2.1f\n\n", VERSION);
+
     printf("Usage: shell [-hvp]\n");
     printf("   -h   print this message\n");
+    printf("   -b   print infomation about b-shell\n");
     printf("   -v   print additional diagnostic information\n");
-    printf("   -p   do not emit a command prompt\n");
+    printf("   -p   do not emit a command prompt\n\n");
+
+    printf("List of all built-in command that my B Shell supports.\n\n");
+
+    printf("jobs\tjobs     -- lists all background jobs.\n");
+    printf("quit\tquit     -- terminates the shell\n");
+    printf("bg\tbg <job> -- sending <job> a SIGCONT sinal, runs it in the background.\n");
+    printf("fg\tfg <job> -- sending <job> a SIGCONT sinal, runs it in the foreround.\n\n");
     exit(1);
 }
 
