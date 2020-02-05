@@ -1,0 +1,10 @@
+0000000000000000 <sum>:
+   0:	b8 00 00 00 00       	mov    $0x0,%eax
+   5:	ba 00 00 00 00       	mov    $0x0,%edx
+   a:	eb 09                	jmp    15 <sum+0x15>
+   c:	48 63 ca             	movslq %edx,%rcx
+   f:	03 04 8f             	add    (%rdi,%rcx,4),%eax
+  12:	83 c2 01             	add    $0x1,%edx
+  15:	39 f2                	cmp    %esi,%edx
+  17:	7c f3                	jl     c <sum+0xc>
+  19:	f3 c3                	repz retq 

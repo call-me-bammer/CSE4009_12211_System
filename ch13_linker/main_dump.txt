@@ -1,0 +1,9 @@
+0000000000000000 <main>:
+   0:	48 83 ec 08          	sub    $0x8,%rsp
+   4:	be 02 00 00 00       	mov    $0x2,%esi
+   9:	48 8d 3d 00 00 00 00 	lea    0x0(%rip),%rdi        # 10 <main+0x10>
+			c: R_X86_64_PC32	array-0x4
+  10:	e8 00 00 00 00       	callq  15 <main+0x15>
+			11: R_X86_64_PLT32	sum-0x4
+  15:	48 83 c4 08          	add    $0x8,%rsp
+  19:	c3                   	retq   

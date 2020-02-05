@@ -183,7 +183,7 @@ void eval(char *cmdline) {
 
         if ((pid = fork()) == 0) { /* Child runs user job */
             
-            /* set child process to identical process gruop (test06) */
+            /* set child process to identical process group (test06) */
             if (setpgrp() < 0) {      /* equivalent to setpgid(0, 0) */
                 unix_error("eval(): setpgid() error");
             }
@@ -360,10 +360,10 @@ void do_bgfg(char **argv)
  */
 void waitfg(pid_t pid) {
 
-    struct job_t* fg_job = getjobpid(jobs, pid);
+    struct job_t* fg = getjobpid(jobs, pid);
 
     /* state check for changing between bg & fg (test09, 10) */
-    while (fg_job->pid == pid && fg_job->state == FG) {
+    while (fg->pid == pid && fg->state == FG) {
         sleep(1);
     }
 }

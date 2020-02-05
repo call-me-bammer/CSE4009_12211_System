@@ -1,0 +1,19 @@
+00000000000005fa <main>:
+ 5fa:	48 83 ec 08          	sub    $0x8,%rsp
+ 5fe:	be 02 00 00 00       	mov    $0x2,%esi
+ 603:	48 8d 3d 06 0a 20 00 	lea    0x200a06(%rip),%rdi        # 201010 <array>
+ 60a:	e8 05 00 00 00       	callq  614 <sum>
+ 60f:	48 83 c4 08          	add    $0x8,%rsp
+ 613:	c3                   	retq   
+
+0000000000000614 <sum>:
+ 614:	b8 00 00 00 00       	mov    $0x0,%eax
+ 619:	ba 00 00 00 00       	mov    $0x0,%edx
+ 61e:	eb 09                	jmp    629 <sum+0x15>
+ 620:	48 63 ca             	movslq %edx,%rcx
+ 623:	03 04 8f             	add    (%rdi,%rcx,4),%eax
+ 626:	83 c2 01             	add    $0x1,%edx
+ 629:	39 f2                	cmp    %esi,%edx
+ 62b:	7c f3                	jl     620 <sum+0xc>
+ 62d:	f3 c3                	repz retq 
+ 62f:	90                   	nop
